@@ -1,5 +1,3 @@
-
-
 from flask import Flask, request, jsonify
 import pandas as pd
 from utils import *  # Make sure utils.py is properly formatted and all necessary functions are defined
@@ -15,7 +13,7 @@ logger = logging.getLogger()
 
 app = Flask(__name__)
 
-@app.route('/51205_6hr', methods=['GET', 'POST'])
+@app.route('/predict', methods=['GET', 'POST'])
 def predict():
     try:
         logger.info("Starting prediction process...")
@@ -23,7 +21,7 @@ def predict():
         # Fetch raw buoy data
         logger.info("Fetching buoy data...")
         dfs = get_buoys(buoy_ids)
-        logger.info(f'\n\nlen(dfs) = {len(dfs)}\n\n')
+        print(f'\n\nlen(dfs) = {len(dfs)}\n\n')
         # print(f'dfs shape: {dfs.shape}')
         # Begin cleaning data
         logger.info("Preparing data...")
@@ -33,7 +31,7 @@ def predict():
         # Merge and clean data
         logger.info("Merging data...")
         dfx = get_merged(prepped_dfs)
-        logger.info(f'\n\dfx shape (post merge): {dfx.shape}\n\n')
+        print(f'\n\dfx shape (post merge): {dfx.shape}\n\n')
 
         # Get time of prediction
         logger.info("Getting time of prediction...")
@@ -49,8 +47,7 @@ def predict():
 
         # Align columns with the scaler
         dfx.columns = scaler_compatible_columns   
-        logger.info('converting feet to meters for prediction...')
-        dfx = convert_ft_to_m(dfx)  # Convert feet to meters`
+
         # Scale numeric, encode categories
         logger.info("Processing data...")
         dfx_processed = encodeNscale(dfx, Xscaler)
@@ -74,20 +71,18 @@ def predict():
 
         # Get raw prediction
         logger.info("Making prediction...")
-        logger.info(f'X.shape = {X.shape}')
+        print(f'X.shape = {X.shape}')
         y_scaled = model.predict(X)
 
         # Scale prediction
         y = yscaler.inverse_transform(y_scaled)
-        logger.info(f'converting meters back to feet for output...')
-        yhat = convert_m_to_ft(y.ravel())  # Flatten the array and convert meters to feet
-        logger.info(f'Prediction in meters: {yhat}, of type {type(yhat)}')
-        # yhat_serializable = yhat.tolist()
+        logger.info(f'Prediction: {y}')
+        prediction_list = y.tolist()
         prediction_time_str = datetime_to_readable_string(time_of_y)
 
         # Format and return the response
         return jsonify({
-            'prediction': yhat,
+            'prediction': prediction_list,
             'prediction_time': prediction_time_str
         })
 
